@@ -1,20 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Raflido Online Racing</title>
+  <title>Raflido Online Racing - Network Test</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
       padding: 20px;
       background: #111;
-      color: white;
+      color: #fff;
     }
 
     h1 {
@@ -22,38 +21,59 @@
     }
 
     button {
-      padding: 12px 18px;
-      margin: 6px 4px;
+      padding: 12px 20px;
+      margin: 5px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
       font-size: 15px;
     }
 
-    #login {
+    #loginBtn {
       background: #4285f4;
       color: white;
     }
 
-    #queue {
-      background: #20a464;
+    #queueBtn {
+      background: #28a745;
       color: white;
     }
 
-    #queue:disabled {
-      background: #555;
+    #logoutBtn {
+      background: #dc3545;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
       cursor: not-allowed;
     }
 
-    #log {
-      background: #050505;
-      color: #00ff66;
-      padding: 16px;
-      min-height: 300px;
-      overflow: auto;
-      white-space: pre-wrap;
-      border-radius: 8px;
+    #status {
       margin-top: 20px;
+      padding: 15px;
+      background: #222;
+      border-radius: 8px;
+    }
+
+    #log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #000;
+      border-radius: 8px;
+      min-height: 250px;
+      max-height: 450px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .user-info {
+      margin-top: 15px;
+      padding: 15px;
+      background: #1d1d1d;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -61,63 +81,73 @@
 <body>
 
   <h1>🏁 Raflido Online Racing</h1>
+  <p>Google Login + Multiplayer Server Test</p>
 
-  <p>
-    Google Login এবং Multiplayer Server connection test
-  </p>
-
-  <button id="login">
+  <button id="loginBtn">
     Login with Google
   </button>
 
-  <button id="queue" disabled>
-    Find Race
+  <button id="queueBtn" disabled>
+    Join Race Queue
   </button>
 
-  <pre id="log"></pre>
+  <button id="logoutBtn" disabled>
+    Logout
+  </button>
+
+  <div id="status">
+    Status: Not logged in
+  </div>
+
+  <div id="userInfo" class="user-info" style="display:none;">
+    <strong>User:</strong>
+    <div id="userName"></div>
+
+    <strong>Email:</strong>
+    <div id="userEmail"></div>
+
+    <strong>UID:</strong>
+    <div id="userUid"></div>
+  </div>
+
+  <div id="log"></div>
 
 
+  <!-- Firebase SDK -->
   <script type="module">
 
-    // =========================================================
-    // FIREBASE
-    // =========================================================
-
-    import { initializeApp }
-      from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import {
+      initializeApp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 
     import {
       getAuth,
       GoogleAuthProvider,
-      signInWithPopup
-    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
 
-    // তোমার Firebase configuration
+    // =====================================================
+    // FIREBASE CONFIG
+    // =====================================================
+
     const firebaseConfig = {
-
-      apiKey:
-        "AIzaSyCOVGBKsUiJThbGAfztoQ8j1oFmlhr0cqU",
-
-      authDomain:
-        "raflido-online-racing.firebaseapp.com",
-
-      projectId:
-        "raflido-online-racing",
-
-      storageBucket:
-        "raflido-online-racing.firebasestorage.app",
-
-      messagingSenderId:
-        "268033927150",
-
-      appId:
-        "1:268033927150:web:76fb20fe015051c206d0ff"
-
+      apiKey: "AIzaSyCOVGBKsUiJThbGAfztoQ8j1oFmlhr0cqU",
+      authDomain: "raflido-online-racing.firebaseapp.com",
+      projectId: "raflido-online-racing",
+      storageBucket: "raflido-online-racing.firebasestorage.app",
+      messagingSenderId: "268033927150",
+      appId: "1:268033927150:web:76fb20fe015051c206d0ff",
+      measurementId: "G-HGYLFMRWYK"
     };
 
 
-    // Firebase initialize
+    // =====================================================
+    // INITIALIZE FIREBASE
+    // =====================================================
+
     const app = initializeApp(firebaseConfig);
 
     const auth = getAuth(app);
@@ -125,90 +155,189 @@
     const provider = new GoogleAuthProvider();
 
 
-    // =========================================================
-    // RACING SERVER
-    // =========================================================
-
-    // এখন Render server তৈরি হয়নি।
-    // তাই আপাতত এটা পরিবর্তন করবে না।
+    // =====================================================
+    // RENDER SERVER
+    // =====================================================
 
     const SERVER_URL =
-      "wss://YOUR-RENDER-SERVICE.onrender.com";
+      "wss://raflido-online-racing.onrender.com";
 
 
-    // =========================================================
-    // UI
-    // =========================================================
+    // =====================================================
+    // HTML ELEMENTS
+    // =====================================================
 
-    const logBox =
-      document.getElementById("log");
+    const loginBtn = document.getElementById("loginBtn");
+    const queueBtn = document.getElementById("queueBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    const loginButton =
-      document.getElementById("login");
+    const statusBox = document.getElementById("status");
+    const logBox = document.getElementById("log");
 
-    const queueButton =
-      document.getElementById("queue");
+    const userInfo = document.getElementById("userInfo");
+    const userName = document.getElementById("userName");
+    const userEmail = document.getElementById("userEmail");
+    const userUid = document.getElementById("userUid");
 
 
+    // =====================================================
+    // VARIABLES
+    // =====================================================
+
+    let currentUser = null;
     let socket = null;
 
 
-    // =========================================================
+    // =====================================================
     // LOG FUNCTION
-    // =========================================================
+    // =====================================================
 
     function log(message) {
 
-      const time =
-        new Date().toLocaleTimeString();
+      const time = new Date().toLocaleTimeString();
 
       logBox.textContent +=
         `[${time}] ${message}\n`;
 
-      logBox.scrollTop =
-        logBox.scrollHeight;
+      logBox.scrollTop = logBox.scrollHeight;
     }
 
 
-    // =========================================================
-    // GOOGLE LOGIN
-    // =========================================================
+    // =====================================================
+    // STATUS FUNCTION
+    // =====================================================
 
-    loginButton.onclick = async function () {
+    function setStatus(message) {
+
+      statusBox.textContent =
+        "Status: " + message;
+
+      log(message);
+    }
+
+
+    // =====================================================
+    // GOOGLE LOGIN
+    // =====================================================
+
+    loginBtn.addEventListener("click", async () => {
 
       try {
 
-        log("Opening Google Login...");
+        setStatus("Opening Google Login...");
 
         const result =
-          await signInWithPopup(
-            auth,
-            provider
-          );
+          await signInWithPopup(auth, provider);
 
-
-        const user =
-          result.user;
-
+        currentUser = result.user;
 
         log(
-          "Google Login successful!"
+          "Google login successful: " +
+          currentUser.email
         );
 
-        log(
-          "Player: " +
-          (user.displayName || "Racer")
+      } catch (error) {
+
+        console.error(error);
+
+        setStatus(
+          "Login failed: " + error.message
+        );
+      }
+
+    });
+
+
+    // =====================================================
+    // AUTH STATE
+    // =====================================================
+
+    onAuthStateChanged(auth, async (user) => {
+
+      if (user) {
+
+        currentUser = user;
+
+        userInfo.style.display = "block";
+
+        userName.textContent =
+          user.displayName || "No name";
+
+        userEmail.textContent =
+          user.email || "No email";
+
+        userUid.textContent =
+          user.uid;
+
+        loginBtn.disabled = true;
+
+        logoutBtn.disabled = false;
+
+        queueBtn.disabled = false;
+
+        setStatus(
+          "Logged in as " + user.email
         );
 
-        log(
-          "Email: " +
-          (user.email || "")
+        // Connect to multiplayer server
+        await connectToServer();
+
+      } else {
+
+        currentUser = null;
+
+        userInfo.style.display = "none";
+
+        loginBtn.disabled = false;
+
+        logoutBtn.disabled = true;
+
+        queueBtn.disabled = true;
+
+        setStatus("Not logged in");
+
+      }
+
+    });
+
+
+    // =====================================================
+    // CONNECT TO WEBSOCKET SERVER
+    // =====================================================
+
+    async function connectToServer() {
+
+      if (!currentUser) {
+
+        log("No Firebase user.");
+
+        return;
+      }
+
+
+      // Close previous connection
+
+      if (socket) {
+
+        try {
+          socket.close();
+        } catch (e) {}
+
+        socket = null;
+      }
+
+
+      try {
+
+        setStatus(
+          "Getting Firebase ID token..."
         );
 
 
-        // Firebase ID Token
+        // Get Firebase authentication token
+
         const token =
-          await user.getIdToken();
+          await currentUser.getIdToken(true);
 
 
         log(
@@ -216,254 +345,356 @@
         );
 
 
-        // =====================================================
-        // CONNECT TO GAME SERVER
-        // =====================================================
-
-        log(
-          "Connecting to racing server..."
+        setStatus(
+          "Connecting to multiplayer server..."
         );
 
+
+        // Create WebSocket connection
 
         socket =
           new WebSocket(SERVER_URL);
 
 
-        // Server connection successful
-        socket.onopen = function () {
+        // =================================================
+        // SOCKET OPEN
+        // =================================================
+
+        socket.addEventListener("open", () => {
 
           log(
             "WebSocket connected."
           );
 
 
-          // Server-কে Firebase token পাঠানো
+          setStatus(
+            "Connected to multiplayer server"
+          );
+
+
+          // Authenticate with server
+
           socket.send(
             JSON.stringify({
-
               type: "auth",
-
               token: token
-
             })
           );
 
-        };
-
-
-        // Server থেকে message
-        socket.onmessage = function (event) {
 
           log(
-            "SERVER: " +
-            event.data
+            "Authentication sent to server."
           );
 
-
-          try {
-
-            const message =
-              JSON.parse(event.data);
+        });
 
 
-            // Authentication successful
-            if (
-              message.type ===
-              "authenticated"
-            ) {
+        // =================================================
+        // SOCKET MESSAGE
+        // =================================================
+
+        socket.addEventListener(
+          "message",
+          (event) => {
+
+            try {
+
+              const message =
+                JSON.parse(event.data);
+
 
               log(
-                "Server authentication successful!"
+                "SERVER → " +
+                JSON.stringify(
+                  message,
+                  null,
+                  2
+                )
               );
 
 
-              queueButton.disabled =
-                false;
-
-            }
+              handleServerMessage(message);
 
 
-            // Match found
-            if (
-              message.type ===
-              "match_found"
-            ) {
+            } catch (error) {
 
               log(
-                "🏁 Race match found!"
-              );
-
-            }
-
-
-            // Countdown
-            if (
-              message.type ===
-              "countdown"
-            ) {
-
-              log(
-                "Countdown: " +
-                message.value
-              );
-
-            }
-
-
-            // Race start
-            if (
-              message.type ===
-              "race_start"
-            ) {
-
-              log(
-                "🚗 RACE START!"
-              );
-
-            }
-
-
-            // Player finish
-            if (
-              message.type ===
-              "player_finished"
-            ) {
-
-              log(
-                "Player finished: " +
-                message.position +
-                " position"
-              );
-
-            }
-
-
-            // Race finished
-            if (
-              message.type ===
-              "race_finished"
-            ) {
-
-              log(
-                "🏆 Race finished!"
-              );
-
-            }
-
-
-            // Server error
-            if (
-              message.type ===
-              "error"
-            ) {
-
-              log(
-                "❌ Server error: " +
-                message.message
+                "Invalid server message: " +
+                event.data
               );
 
             }
 
           }
+        );
 
-          catch (error) {
 
-            log(
-              "Could not read server message."
+        // =================================================
+        // SOCKET ERROR
+        // =================================================
+
+        socket.addEventListener(
+          "error",
+          (error) => {
+
+            console.error(error);
+
+            setStatus(
+              "WebSocket error"
             );
 
           }
-
-        };
-
-
-        // WebSocket error
-        socket.onerror = function () {
-
-          log(
-            "❌ WebSocket connection error."
-          );
-
-        };
+        );
 
 
-        // Connection closed
-        socket.onclose = function () {
+        // =================================================
+        // SOCKET CLOSE
+        // =================================================
 
-          log(
-            "WebSocket connection closed."
-          );
+        socket.addEventListener(
+          "close",
+          () => {
 
-          queueButton.disabled =
-            true;
+            log(
+              "WebSocket connection closed."
+            );
 
-        };
+            setStatus(
+              "Disconnected from server"
+            );
 
-      }
+          }
+        );
 
-      catch (error) {
+
+      } catch (error) {
 
         console.error(error);
 
-        log(
-          "❌ Google Login Error: " +
+        setStatus(
+          "Connection failed: " +
           error.message
         );
 
       }
 
-    };
+    }
 
 
-    // =========================================================
-    // FIND RACE
-    // =========================================================
+    // =====================================================
+    // SERVER MESSAGE HANDLER
+    // =====================================================
 
-    queueButton.onclick =
-      function () {
+    function handleServerMessage(message) {
+
+      switch (message.type) {
+
+
+        // -----------------------------------------------
+        // AUTHENTICATED
+        // -----------------------------------------------
+
+        case "authenticated":
+
+          setStatus(
+            "Server authentication successful"
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // MATCH FOUND
+        // -----------------------------------------------
+
+        case "match_found":
+
+          setStatus(
+            "Match found! Players: " +
+            (message.players?.length || 0)
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // COUNTDOWN
+        // -----------------------------------------------
+
+        case "countdown":
+
+          setStatus(
+            "Race starts in " +
+            message.seconds +
+            " seconds"
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // RACE START
+        // -----------------------------------------------
+
+        case "race_start":
+
+          setStatus(
+            "🏁 RACE STARTED!"
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // PLAYER FINISHED
+        // -----------------------------------------------
+
+        case "player_finished":
+
+          log(
+            "Player finished: " +
+            JSON.stringify(message)
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // RACE FINISHED
+        // -----------------------------------------------
+
+        case "race_finished":
+
+          setStatus(
+            "Race finished!"
+          );
+
+          log(
+            "Race result: " +
+            JSON.stringify(
+              message,
+              null,
+              2
+            )
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // ERROR
+        // -----------------------------------------------
+
+        case "error":
+
+          setStatus(
+            "Server error: " +
+            (message.message || "Unknown error")
+          );
+
+          break;
+
+
+        // -----------------------------------------------
+        // DEFAULT
+        // -----------------------------------------------
+
+        default:
+
+          log(
+            "Unknown server message type: " +
+            message.type
+          );
+
+      }
+
+    }
+
+
+    // =====================================================
+    // JOIN RACE QUEUE
+    // =====================================================
+
+    queueBtn.addEventListener(
+      "click",
+      () => {
+
+        if (!socket) {
+
+          setStatus(
+            "Not connected to server"
+          );
+
+          return;
+        }
+
 
         if (
-          !socket ||
           socket.readyState !==
           WebSocket.OPEN
         ) {
 
-          log(
-            "❌ Server is not connected."
+          setStatus(
+            "WebSocket is not connected"
           );
 
           return;
-
         }
-
-
-        log(
-          "Searching for racers..."
-        );
 
 
         socket.send(
           JSON.stringify({
-
-            type:
-              "join_queue"
-
+            type: "join_queue"
           })
         );
 
-      };
 
+        setStatus(
+          "Searching for players..."
+        );
 
-    // =========================================================
-    // PAGE START
-    // =========================================================
-
-    log(
-      "Raflido Racing client loaded."
+      }
     );
 
-    log(
-      "Waiting for Google Login..."
+
+    // =====================================================
+    // LOGOUT
+    // =====================================================
+
+    logoutBtn.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          if (socket) {
+
+            socket.close();
+
+            socket = null;
+          }
+
+
+          await signOut(auth);
+
+
+          log(
+            "Logged out."
+          );
+
+
+        } catch (error) {
+
+          console.error(error);
+
+          setStatus(
+            "Logout failed: " +
+            error.message
+          );
+
+        }
+
+      }
     );
 
   </script>
