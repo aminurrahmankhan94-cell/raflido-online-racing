@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /players/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Important: coins/XP are server-controlled by Firebase Admin SDK.
+      allow write: if false;
+    }
+
+    match /raceResults/{resultId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /races/{raceId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

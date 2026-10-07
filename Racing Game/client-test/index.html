@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Raflido Racing Network Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; }
+    button { padding: 10px 16px; margin: 5px; }
+    pre { background: #111; color: #0f0; padding: 16px; min-height: 250px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>Raflido Racing — Login & Server Test</h1>
+  <p>Replace the Firebase config below with your own Web App config.</p>
+
+  <button id="login">Login with Google</button>
+  <button id="queue" disabled>Find Race</button>
+
+  <pre id="log"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "PASTE_YOUR_API_KEY",
+      authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+      projectId: "PASTE_YOUR_PROJECT_ID",
+      storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+      messagingSenderId: "PASTE_YOUR_SENDER_ID",
+      appId: "PASTE_YOUR_APP_ID"
+    };
+
+    // Change this after deploying the server on Render.
+    const SERVER_URL = "wss://YOUR-RENDER-SERVICE.onrender.com";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const logBox = document.getElementById("log");
+    const queueBtn = document.getElementById("queue");
+
+    let socket;
+
+    function log(x) {
+      logBox.textContent += x + "\\n";
+    }
+
+    document.getElementById("login").onclick = async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const token = await result.user.getIdToken();
+
+        socket = new WebSocket(SERVER_URL);
+
+        socket.onopen = () => {
+          log("WebSocket connected");
+          socket.send(JSON.stringify({
+            type: "auth",
+            token
+          }));
+        };
+
+        socket.onmessage = e => {
+          log(e.data);
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === "authenticated") queueBtn.disabled = false;
+          } catch {}
+        };
+
+        socket.onerror = () => log("WebSocket error");
+        socket.onclose = () => log("WebSocket closed");
+      } catch (e) {
+        log("Login error: " + e.message);
+      }
+    };
+
+    queueBtn.onclick = () => {
+      socket.send(JSON.stringify({ type: "join_queue" }));
+    };
+  </script>
+</body>
+</html>
