@@ -1,89 +1,472 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Raflido Racing Network Test</title>
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Raflido Online Racing</title>
+
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; }
-    button { padding: 10px 16px; margin: 5px; }
-    pre { background: #111; color: #0f0; padding: 16px; min-height: 250px; overflow:auto; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #111;
+      color: white;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 12px 18px;
+      margin: 6px 4px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    #login {
+      background: #4285f4;
+      color: white;
+    }
+
+    #queue {
+      background: #20a464;
+      color: white;
+    }
+
+    #queue:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    #log {
+      background: #050505;
+      color: #00ff66;
+      padding: 16px;
+      min-height: 300px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
   </style>
 </head>
-<body>
-  <h1>Raflido Racing — Login & Server Test</h1>
-  <p>Replace the Firebase config below with your own Web App config.</p>
 
-  <button id="login">Login with Google</button>
-  <button id="queue" disabled>Find Race</button>
+<body>
+
+  <h1>🏁 Raflido Online Racing</h1>
+
+  <p>
+    Google Login এবং Multiplayer Server connection test
+  </p>
+
+  <button id="login">
+    Login with Google
+  </button>
+
+  <button id="queue" disabled>
+    Find Race
+  </button>
 
   <pre id="log"></pre>
 
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+    // =========================================================
+    // FIREBASE
+    // =========================================================
+
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
     import {
       getAuth,
       GoogleAuthProvider,
       signInWithPopup
     } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
+
+    // তোমার Firebase configuration
     const firebaseConfig = {
-      apiKey: "PASTE_YOUR_API_KEY",
-      authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-      projectId: "PASTE_YOUR_PROJECT_ID",
-      storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-      messagingSenderId: "PASTE_YOUR_SENDER_ID",
-      appId: "PASTE_YOUR_APP_ID"
+
+      apiKey:
+        "AIzaSyCOVGBKsUiJThbGAfztoQ8j1oFmlhr0cqU",
+
+      authDomain:
+        "raflido-online-racing.firebaseapp.com",
+
+      projectId:
+        "raflido-online-racing",
+
+      storageBucket:
+        "raflido-online-racing.firebasestorage.app",
+
+      messagingSenderId:
+        "268033927150",
+
+      appId:
+        "1:268033927150:web:76fb20fe015051c206d0ff"
+
     };
 
-    // Change this after deploying the server on Render.
-    const SERVER_URL = "wss://YOUR-RENDER-SERVICE.onrender.com";
 
+    // Firebase initialize
     const app = initializeApp(firebaseConfig);
+
     const auth = getAuth(app);
+
     const provider = new GoogleAuthProvider();
 
-    const logBox = document.getElementById("log");
-    const queueBtn = document.getElementById("queue");
 
-    let socket;
+    // =========================================================
+    // RACING SERVER
+    // =========================================================
 
-    function log(x) {
-      logBox.textContent += x + "\\n";
+    // এখন Render server তৈরি হয়নি।
+    // তাই আপাতত এটা পরিবর্তন করবে না।
+
+    const SERVER_URL =
+      "wss://YOUR-RENDER-SERVICE.onrender.com";
+
+
+    // =========================================================
+    // UI
+    // =========================================================
+
+    const logBox =
+      document.getElementById("log");
+
+    const loginButton =
+      document.getElementById("login");
+
+    const queueButton =
+      document.getElementById("queue");
+
+
+    let socket = null;
+
+
+    // =========================================================
+    // LOG FUNCTION
+    // =========================================================
+
+    function log(message) {
+
+      const time =
+        new Date().toLocaleTimeString();
+
+      logBox.textContent +=
+        `[${time}] ${message}\n`;
+
+      logBox.scrollTop =
+        logBox.scrollHeight;
     }
 
-    document.getElementById("login").onclick = async () => {
+
+    // =========================================================
+    // GOOGLE LOGIN
+    // =========================================================
+
+    loginButton.onclick = async function () {
+
       try {
-        const result = await signInWithPopup(auth, provider);
-        const token = await result.user.getIdToken();
 
-        socket = new WebSocket(SERVER_URL);
+        log("Opening Google Login...");
 
-        socket.onopen = () => {
-          log("WebSocket connected");
-          socket.send(JSON.stringify({
-            type: "auth",
-            token
-          }));
+        const result =
+          await signInWithPopup(
+            auth,
+            provider
+          );
+
+
+        const user =
+          result.user;
+
+
+        log(
+          "Google Login successful!"
+        );
+
+        log(
+          "Player: " +
+          (user.displayName || "Racer")
+        );
+
+        log(
+          "Email: " +
+          (user.email || "")
+        );
+
+
+        // Firebase ID Token
+        const token =
+          await user.getIdToken();
+
+
+        log(
+          "Firebase ID token received."
+        );
+
+
+        // =====================================================
+        // CONNECT TO GAME SERVER
+        // =====================================================
+
+        log(
+          "Connecting to racing server..."
+        );
+
+
+        socket =
+          new WebSocket(SERVER_URL);
+
+
+        // Server connection successful
+        socket.onopen = function () {
+
+          log(
+            "WebSocket connected."
+          );
+
+
+          // Server-কে Firebase token পাঠানো
+          socket.send(
+            JSON.stringify({
+
+              type: "auth",
+
+              token: token
+
+            })
+          );
+
         };
 
-        socket.onmessage = e => {
-          log(e.data);
+
+        // Server থেকে message
+        socket.onmessage = function (event) {
+
+          log(
+            "SERVER: " +
+            event.data
+          );
+
+
           try {
-            const msg = JSON.parse(e.data);
-            if (msg.type === "authenticated") queueBtn.disabled = false;
-          } catch {}
+
+            const message =
+              JSON.parse(event.data);
+
+
+            // Authentication successful
+            if (
+              message.type ===
+              "authenticated"
+            ) {
+
+              log(
+                "Server authentication successful!"
+              );
+
+
+              queueButton.disabled =
+                false;
+
+            }
+
+
+            // Match found
+            if (
+              message.type ===
+              "match_found"
+            ) {
+
+              log(
+                "🏁 Race match found!"
+              );
+
+            }
+
+
+            // Countdown
+            if (
+              message.type ===
+              "countdown"
+            ) {
+
+              log(
+                "Countdown: " +
+                message.value
+              );
+
+            }
+
+
+            // Race start
+            if (
+              message.type ===
+              "race_start"
+            ) {
+
+              log(
+                "🚗 RACE START!"
+              );
+
+            }
+
+
+            // Player finish
+            if (
+              message.type ===
+              "player_finished"
+            ) {
+
+              log(
+                "Player finished: " +
+                message.position +
+                " position"
+              );
+
+            }
+
+
+            // Race finished
+            if (
+              message.type ===
+              "race_finished"
+            ) {
+
+              log(
+                "🏆 Race finished!"
+              );
+
+            }
+
+
+            // Server error
+            if (
+              message.type ===
+              "error"
+            ) {
+
+              log(
+                "❌ Server error: " +
+                message.message
+              );
+
+            }
+
+          }
+
+          catch (error) {
+
+            log(
+              "Could not read server message."
+            );
+
+          }
+
         };
 
-        socket.onerror = () => log("WebSocket error");
-        socket.onclose = () => log("WebSocket closed");
-      } catch (e) {
-        log("Login error: " + e.message);
+
+        // WebSocket error
+        socket.onerror = function () {
+
+          log(
+            "❌ WebSocket connection error."
+          );
+
+        };
+
+
+        // Connection closed
+        socket.onclose = function () {
+
+          log(
+            "WebSocket connection closed."
+          );
+
+          queueButton.disabled =
+            true;
+
+        };
+
       }
+
+      catch (error) {
+
+        console.error(error);
+
+        log(
+          "❌ Google Login Error: " +
+          error.message
+        );
+
+      }
+
     };
 
-    queueBtn.onclick = () => {
-      socket.send(JSON.stringify({ type: "join_queue" }));
-    };
+
+    // =========================================================
+    // FIND RACE
+    // =========================================================
+
+    queueButton.onclick =
+      function () {
+
+        if (
+          !socket ||
+          socket.readyState !==
+          WebSocket.OPEN
+        ) {
+
+          log(
+            "❌ Server is not connected."
+          );
+
+          return;
+
+        }
+
+
+        log(
+          "Searching for racers..."
+        );
+
+
+        socket.send(
+          JSON.stringify({
+
+            type:
+              "join_queue"
+
+          })
+        );
+
+      };
+
+
+    // =========================================================
+    // PAGE START
+    // =========================================================
+
+    log(
+      "Raflido Racing client loaded."
+    );
+
+    log(
+      "Waiting for Google Login..."
+    );
+
   </script>
+
 </body>
 </html>
